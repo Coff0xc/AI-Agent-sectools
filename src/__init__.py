@@ -1,1 +1,1 @@
-"""Source package initialization."""
+"""MCP Security Scanner."""

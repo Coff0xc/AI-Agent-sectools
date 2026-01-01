@@ -1,4 +1,5 @@
-"""MCP server package for AI penetration testing tool."""
-from .server import PentestMCPServer
+"""MCP Security Scanner - Pure MCP-based penetration testing toolkit."""
+from .server import SecurityMCPServer
+from .auth import AuthManager
 
-__all__ = ["PentestMCPServer"]
+__all__ = ["SecurityMCPServer", "AuthManager"]

@@ -1,19 +1,17 @@
 #!/usr/bin/env python
-"""MCP server startup script for AI penetration testing tool."""
+"""MCP Security Scanner - Entry point."""
 import asyncio
 import logging
 import sys
 from pathlib import Path
 
-# Add project root to path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(Path(__file__).parent))
 
-from src.mcp.server import PentestMCPServer
+from src.mcp import SecurityMCPServer
 
 
-def setup_logging():
-    """Setup logging configuration."""
+def main():
+    Path("logs").mkdir(exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -23,32 +21,9 @@ def setup_logging():
         ]
     )
 
-
-async def main():
-    """Main entry point."""
-    # Setup logging
-    Path("logs").mkdir(exist_ok=True)
-    setup_logging()
-    logger = logging.getLogger(__name__)
-
-    try:
-        logger.info("Starting AI Pentest MCP Server...")
-
-        # Create and initialize server
-        server = PentestMCPServer()
-        await server.initialize()
-
-        logger.info("MCP Server initialized, starting stdio server...")
-
-        # Run server
-        await server.run()
-
-    except KeyboardInterrupt:
-        logger.info("Server stopped by user")
-    except Exception as e:
-        logger.error(f"Server error: {e}", exc_info=True)
-        sys.exit(1)
+    server = SecurityMCPServer()
+    asyncio.run(server.run())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

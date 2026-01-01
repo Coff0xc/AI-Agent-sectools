@@ -1,202 +1,69 @@
-"""MCP server implementation."""
+"""MCP Security Scanner Server - Pure MCP-based penetration testing toolkit."""
+import json
+import asyncio
 import logging
 from mcp.server.stdio import stdio_server
 from mcp.server import Server
 from mcp.types import Tool, TextContent
-from .config import MCPConfig
-from .auth import AuthorizationManager
-from .tools import MCPToolsHandler
+from .auth import AuthManager
 
 
-class PentestMCPServer:
-    """AI Penetration Testing MCP Server."""
+class SecurityMCPServer:
+    """MCP Server for security scanning tools."""
 
     def __init__(self):
-        self.server = Server("ai-pentest")
-        self.config = MCPConfig.from_env()
-        self.auth_manager = AuthorizationManager()
-        self.tools_handler = None
+        self.server = Server("security-scanner")
+        self.auth = AuthManager()
         self.logger = logging.getLogger(__name__)
+        self._register_tools()
 
-    async def initialize(self):
-        """Initialize server components."""
-        from ..core.llm import LLMProvider, LLMConfig
-        from ..core.llm.registry import LLMRegistry
-        from ..core.agent import Orchestrator
-        from ..tools import ToolManager
-        from ..safety import SecurityManager
-
-        # Initialize LLM
-        llm_config = LLMConfig(
-            provider=LLMProvider[self.config.default_llm_provider.upper()],
-            model=self.config.default_llm_model,
-            api_key=self.config.openai_api_key if self.config.default_llm_provider == "openai" else self.config.anthropic_api_key,
-            temperature=0.7,
-            max_tokens=2000
-        )
-        llm_provider = LLMRegistry.get_provider(llm_config)
-
-        # Initialize components
-        tool_manager = ToolManager()
-        security_manager = SecurityManager()
-
-        # Configure security
-        security_manager.scope_validator.add_allowed_domain("*.example.com")
-        security_manager.scope_validator.add_allowed_domain("httpbin.org")
-
-        # Create orchestrator
-        orchestrator = Orchestrator(
-            llm_provider=llm_provider,
-            tool_manager=tool_manager,
-            security_manager=security_manager,
-            max_iterations=self.config.max_iterations
-        )
-
-        # Initialize tools handler
-        self.tools_handler = MCPToolsHandler(
-            orchestrator=orchestrator,
-            tool_manager=tool_manager,
-            security_manager=security_manager,
-            auth_manager=self.auth_manager,
-            config=self.config
-        )
-
-        self.logger.info("MCP server initialized successfully")
-
-    def register_tools(self):
-        """Register MCP tools."""
+    def _register_tools(self):
+        """Register all MCP tools."""
 
         @self.server.list_tools()
         async def list_tools():
             return [
                 Tool(
-                    name="pentest_scan",
-                    description="Execute AI-driven penetration test scan",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "target": {"type": "string", "description": "Target to scan (domain/IP/URL)"},
-                            "scan_type": {"type": "string", "enum": ["web", "network", "api"], "description": "Type of scan"},
-                            "llm_provider": {"type": "string", "enum": ["openai", "anthropic", "ollama"], "description": "LLM provider (optional)"},
-                            "max_iterations": {"type": "integer", "description": "Max iterations (optional)"}
-                        },
-                        "required": ["target", "scan_type"]
-                    }
-                ),
-                Tool(
-                    name="pentest_get_results",
-                    description="Get detailed scan results",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "scan_id": {"type": "string", "description": "Scan ID"}
-                        },
-                        "required": ["scan_id"]
-                    }
-                ),
-                Tool(
-                    name="pentest_list_scans",
-                    description="List all scan history",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "limit": {"type": "integer", "description": "Limit number of results (optional)"}
-                        }
-                    }
-                ),
-                Tool(
-                    name="pentest_get_scan_status",
-                    description="Get current scan status",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "scan_id": {"type": "string", "description": "Scan ID"}
-                        },
-                        "required": ["scan_id"]
-                    }
-                ),
-                Tool(
-                    name="pentest_configure_llm",
-                    description="Configure LLM provider",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "provider": {"type": "string", "enum": ["openai", "anthropic", "ollama"], "description": "LLM provider"},
-                            "model": {"type": "string", "description": "Model name (optional)"},
-                            "api_key": {"type": "string", "description": "API key (optional)"}
-                        },
-                        "required": ["provider"]
-                    }
-                ),
-                Tool(
-                    name="pentest_list_tools",
-                    description="List available penetration testing tools",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "category": {"type": "string", "description": "Tool category filter (optional)"}
-                        }
-                    }
-                ),
-                Tool(
-                    name="pentest_configure_scope",
-                    description="Configure scan scope (whitelist)",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "allowed_domains": {"type": "array", "items": {"type": "string"}, "description": "Allowed domains"},
-                            "allowed_ips": {"type": "array", "items": {"type": "string"}, "description": "Allowed IPs"},
-                            "blacklist": {"type": "array", "items": {"type": "string"}, "description": "Blacklist patterns"}
-                        }
-                    }
-                ),
-                Tool(
-                    name="pentest_get_config",
-                    description="Get current configuration",
-                    inputSchema={"type": "object", "properties": {}}
-                ),
-                # === Pure Python Scanner Tools ===
-                Tool(
                     name="scan_ports",
-                    description="Scan TCP ports (pure Python, no nmap required)",
+                    description="TCP port scan with service detection and banner grabbing",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "target": {"type": "string", "description": "Target IP or hostname"},
-                            "ports": {"type": "array", "items": {"type": "integer"}, "description": "Ports to scan (optional)"},
-                            "grab_banner": {"type": "boolean", "description": "Grab service banners (default: true)"}
+                            "ports": {"type": "array", "items": {"type": "integer"}, "description": "Ports to scan (default: common ports)"},
+                            "grab_banner": {"type": "boolean", "default": True, "description": "Grab service banners"}
                         },
                         "required": ["target"]
                     }
                 ),
                 Tool(
-                    name="scan_directories",
-                    description="Bruteforce directories and files on web target",
+                    name="scan_web",
+                    description="Web directory and file enumeration",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "target": {"type": "string", "description": "Target URL"},
-                            "wordlist": {"type": "array", "items": {"type": "string"}, "description": "Custom wordlist (optional)"},
-                            "extensions": {"type": "array", "items": {"type": "string"}, "description": "File extensions (optional)"}
+                            "paths": {"type": "array", "items": {"type": "string"}, "description": "Custom paths to check"},
+                            "extensions": {"type": "array", "items": {"type": "string"}, "description": "File extensions"}
                         },
                         "required": ["target"]
                     }
                 ),
                 Tool(
-                    name="enum_subdomains",
-                    description="Enumerate subdomains via DNS",
+                    name="scan_subdomains",
+                    description="DNS subdomain enumeration",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "target": {"type": "string", "description": "Target domain"},
-                            "wordlist": {"type": "array", "items": {"type": "string"}, "description": "Custom subdomain wordlist (optional)"}
+                            "wordlist": {"type": "array", "items": {"type": "string"}, "description": "Custom subdomain wordlist"}
                         },
                         "required": ["target"]
                     }
                 ),
                 Tool(
                     name="scan_ssl",
-                    description="Scan SSL/TLS configuration and certificate",
+                    description="SSL/TLS certificate and configuration analysis",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -207,23 +74,35 @@ class PentestMCPServer:
                 ),
                 Tool(
                     name="scan_vulns",
-                    description="Scan for web vulnerabilities (SQLi, XSS, LFI)",
+                    description="Web vulnerability scan (SQLi, XSS, LFI, SSRF)",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "target": {"type": "string", "description": "Target URL"},
-                            "scan_types": {"type": "array", "items": {"type": "string", "enum": ["sqli", "xss", "lfi", "ssrf"]}, "description": "Vulnerability types to scan (optional)"}
+                            "scan_types": {"type": "array", "items": {"type": "string", "enum": ["sqli", "xss", "lfi", "ssrf"]}, "description": "Vulnerability types"},
+                            "params": {"type": "array", "items": {"type": "string"}, "description": "Parameters to test"}
                         },
                         "required": ["target"]
                     }
                 ),
                 Tool(
-                    name="full_recon",
-                    description="Run full reconnaissance: subdomains, ports, directories, SSL, vulns",
+                    name="full_scan",
+                    description="Full reconnaissance: subdomains + ports + web + SSL + vulns",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "target": {"type": "string", "description": "Target domain"}
+                        },
+                        "required": ["target"]
+                    }
+                ),
+                Tool(
+                    name="add_target",
+                    description="Add target to whitelist for scanning",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "target": {"type": "string", "description": "Domain or IP pattern to whitelist"}
                         },
                         "required": ["target"]
                     }
@@ -232,49 +111,141 @@ class PentestMCPServer:
 
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict):
-            import json
-
             try:
-                if name == "pentest_scan":
-                    result = await self.tools_handler.pentest_scan(**arguments)
-                elif name == "pentest_get_results":
-                    result = await self.tools_handler.pentest_get_results(**arguments)
-                elif name == "pentest_list_scans":
-                    result = await self.tools_handler.pentest_list_scans(**arguments)
-                elif name == "pentest_get_scan_status":
-                    result = await self.tools_handler.pentest_get_scan_status(**arguments)
-                elif name == "pentest_configure_llm":
-                    result = await self.tools_handler.pentest_configure_llm(**arguments)
-                elif name == "pentest_list_tools":
-                    result = await self.tools_handler.pentest_list_tools(**arguments)
-                elif name == "pentest_configure_scope":
-                    result = await self.tools_handler.pentest_configure_scope(**arguments)
-                elif name == "pentest_get_config":
-                    result = await self.tools_handler.pentest_get_config()
-                # Pure Python scanner tools
-                elif name == "scan_ports":
-                    result = await self.tools_handler.scan_ports(**arguments)
-                elif name == "scan_directories":
-                    result = await self.tools_handler.scan_directories(**arguments)
-                elif name == "enum_subdomains":
-                    result = await self.tools_handler.enum_subdomains(**arguments)
+                target = arguments.get("target", "")
+
+                # Authorization check (except for add_target)
+                if name != "add_target" and not self.auth.is_authorized(self._extract_domain(target)):
+                    return [TextContent(type="text", text=json.dumps({
+                        "success": False,
+                        "error": f"Target '{target}' not authorized. Use add_target to whitelist it first."
+                    }, indent=2))]
+
+                # Route to handler
+                if name == "scan_ports":
+                    result = await self._scan_ports(**arguments)
+                elif name == "scan_web":
+                    result = await self._scan_web(**arguments)
+                elif name == "scan_subdomains":
+                    result = await self._scan_subdomains(**arguments)
                 elif name == "scan_ssl":
-                    result = await self.tools_handler.scan_ssl(**arguments)
+                    result = await self._scan_ssl(**arguments)
                 elif name == "scan_vulns":
-                    result = await self.tools_handler.scan_vulns(**arguments)
-                elif name == "full_recon":
-                    result = await self.tools_handler.full_recon(**arguments)
+                    result = await self._scan_vulns(**arguments)
+                elif name == "full_scan":
+                    result = await self._full_scan(**arguments)
+                elif name == "add_target":
+                    result = self._add_target(**arguments)
                 else:
                     result = {"success": False, "error": f"Unknown tool: {name}"}
 
+                self.auth.log_audit(name, target, "success" if result.get("success", True) else "failed")
                 return [TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False))]
 
             except Exception as e:
-                self.logger.error(f"Tool call error: {e}", exc_info=True)
-                return [TextContent(type="text", text=json.dumps({"success": False, "error": str(e)}, ensure_ascii=False))]
+                self.logger.error(f"Tool error: {e}", exc_info=True)
+                return [TextContent(type="text", text=json.dumps({"success": False, "error": str(e)}))]
+
+    def _extract_domain(self, target: str) -> str:
+        """Extract domain from target."""
+        if target.startswith(("http://", "https://")):
+            target = target.split("://")[1]
+        return target.split("/")[0].split(":")[0]
+
+    async def _scan_ports(self, target: str, ports: list = None, grab_banner: bool = True) -> dict:
+        from ..scanner import PortScanner
+        scanner = PortScanner()
+        result = await scanner.scan(target, ports, grab_banner)
+        return {"success": True, **result}
+
+    async def _scan_web(self, target: str, paths: list = None, extensions: list = None) -> dict:
+        from ..scanner import WebScanner
+        scanner = WebScanner()
+        result = await scanner.scan(target, paths, extensions)
+        return {"success": True, **result}
+
+    async def _scan_subdomains(self, target: str, wordlist: list = None) -> dict:
+        from ..scanner import SubdomainScanner
+        scanner = SubdomainScanner()
+        result = await scanner.scan(target, wordlist)
+        return {"success": True, **result}
+
+    async def _scan_ssl(self, target: str) -> dict:
+        from ..scanner import SSLScanner
+        scanner = SSLScanner()
+        result = scanner.scan(target)
+        return {"success": True, **result}
+
+    async def _scan_vulns(self, target: str, scan_types: list = None, params: list = None) -> dict:
+        from ..scanner import VulnScanner
+        scanner = VulnScanner()
+        result = await scanner.scan(target, scan_types, params)
+        return {"success": True, **result}
+
+    async def _full_scan(self, target: str) -> dict:
+        """Run full reconnaissance."""
+        domain = self._extract_domain(target)
+        results = {"target": domain, "phases": {}}
+
+        # Subdomains
+        try:
+            results["phases"]["subdomains"] = await self._scan_subdomains(domain)
+        except Exception as e:
+            results["phases"]["subdomains"] = {"error": str(e)}
+
+        # Ports
+        try:
+            results["phases"]["ports"] = await self._scan_ports(domain)
+        except Exception as e:
+            results["phases"]["ports"] = {"error": str(e)}
+
+        # SSL
+        try:
+            results["phases"]["ssl"] = await self._scan_ssl(domain)
+        except Exception as e:
+            results["phases"]["ssl"] = {"error": str(e)}
+
+        # Web
+        try:
+            results["phases"]["web"] = await self._scan_web(f"https://{domain}")
+        except Exception as e:
+            results["phases"]["web"] = {"error": str(e)}
+
+        # Vulns
+        try:
+            results["phases"]["vulns"] = await self._scan_vulns(f"https://{domain}")
+        except Exception as e:
+            results["phases"]["vulns"] = {"error": str(e)}
+
+        # Summary
+        results["summary"] = {
+            "subdomains": results["phases"].get("subdomains", {}).get("total", 0),
+            "open_ports": results["phases"].get("ports", {}).get("total_open", 0),
+            "ssl_issues": len(results["phases"].get("ssl", {}).get("findings", [])),
+            "web_findings": results["phases"].get("web", {}).get("total", 0),
+            "vulnerabilities": results["phases"].get("vulns", {}).get("total", 0),
+        }
+
+        return {"success": True, **results}
+
+    def _add_target(self, target: str) -> dict:
+        """Add target to whitelist."""
+        self.auth.add_whitelist(target)
+        return {"success": True, "message": f"Added '{target}' to whitelist"}
 
     async def run(self):
         """Run the MCP server."""
-        self.register_tools()
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(read_stream, write_stream, self.server.create_initialization_options())
+
+
+def main():
+    """Entry point."""
+    import asyncio
+    logging.basicConfig(level=logging.INFO)
+    server = SecurityMCPServer()
+    asyncio.run(server.run())
+
+
+if __name__ == "__main__":
+    main()
