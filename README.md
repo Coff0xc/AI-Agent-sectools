@@ -16,6 +16,7 @@ The developers assume no liability for misuse of this tool.
 ## 🌟 Features
 
 - **Multi-LLM Support**: Pluggable architecture supporting OpenAI GPT-4, Anthropic Claude, and local models (Ollama)
+- **MCP Server**: Expose tools through Model Context Protocol for Claude Code, iFlow CLI, Codex, Gemini CLI
 - **Comprehensive Testing**: Web applications, networks, APIs, and mobile applications
 - **AI-Driven Reasoning**: ReAct-style agent (Reasoning + Action) for intelligent attack path planning
 - **Safety First**: Built-in authorization checks, scope validation, and audit logging
@@ -92,6 +93,19 @@ python -m src.utils.db_migrate
 ```
 
 ### 5. Run Your First Scan
+
+#### Option A: MCP Server (Recommended)
+
+Use with Claude Code, iFlow CLI, or other MCP clients:
+
+```bash
+# Start MCP server
+python mcp_server.py
+```
+
+Then configure your MCP client (see [MCP_USAGE.md](MCP_USAGE.md) for details).
+
+#### Option B: CLI Mode
 
 ```bash
 # CLI Mode

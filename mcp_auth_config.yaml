@@ -1,0 +1,53 @@
+# MCP Authorization Configuration
+# This file controls which targets are authorized for penetration testing
+
+authorization:
+  # Authorization mode: whitelist (recommended) / prompt / auto
+  mode: whitelist
+
+  # Whitelist configuration
+  whitelist:
+    # Allowed domains (supports wildcards)
+    domains:
+      - "*.example.com"
+      - "testsite.local"
+      - "httpbin.org"
+      - "localhost"
+
+    # Allowed IP ranges (CIDR notation)
+    ip_ranges:
+      - "192.168.0.0/16"
+      - "10.0.0.0/8"
+      - "127.0.0.1/32"
+
+  # Blacklist (always denied, takes precedence over whitelist)
+  blacklist:
+    - "*.gov"
+    - "*.mil"
+    - "*.edu"
+    - "*.bank"
+    - "*.gov.cn"
+
+  # Auto-approval settings (use with caution)
+  auto_approve:
+    enabled: false
+    max_scans_per_hour: 10
+
+  # Audit logging
+  audit:
+    enabled: true
+    log_file: "logs/mcp_audit.log"
+    log_level: "INFO"
+
+# Security settings
+security:
+  # Maximum concurrent scans
+  max_concurrent_scans: 3
+
+  # Scan timeout (seconds)
+  scan_timeout: 3600
+
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_minute: 10
