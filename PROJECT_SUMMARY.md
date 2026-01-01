@@ -2,7 +2,7 @@
 
 ## 🎉 项目完成状态
 
-我们已经成功完成了AI自动化渗透测试工具的核心5个阶段开发！
+我们已经成功完成了AI自动化渗透测试工具的核心5个阶段开发，并实现了MCP服务器！
 
 ## ✅ 已完成阶段
 
@@ -46,14 +46,26 @@
 - 记忆管理（Memory）- 上下文维护
 - 编排器（Orchestrator）- ReAct循环协调
 
+### 阶段6: MCP服务器 ✅ (新增)
+**文件:** 5个MCP模块 + 3个配置文件
+- MCP服务器核心（server.py）
+- 8个MCP工具实现（tools.py）
+- 授权管理器（auth.py）
+- 配置管理（config.py）
+- 启动脚本（mcp_server.py）
+- 授权配置（mcp_auth_config.yaml）
+- 环境变量模板（.env.example）
+- 完整使用文档（MCP_USAGE.md）
+
 ## 📊 项目统计
 
-- **总文件数:** 46个
-- **代码行数:** 约5,200行
-- **Git提交:** 5次
-- **开发阶段:** 5个（全部完成）
+- **总文件数:** 57个 (+11)
+- **代码行数:** 约6,200行 (+1,000)
+- **Git提交:** 6次
+- **开发阶段:** 6个（全部完成）
 - **已实现工具:** 3个（Nmap、Web Scanner、REST Tester）
 - **LLM提供商:** 3个（OpenAI、Claude、Ollama）
+- **MCP工具:** 8个（完整功能集）
 
 ## 🏗️ 系统架构
 
@@ -146,15 +158,24 @@ context = await agent.run_scan(
 print(f"发现: {len(context.findings)} 个问题")
 ```
 
-## 🎯 下一步计划（阶段6-10）
+### MCP服务器使用
+```python
+# 启动MCP服务器
+python mcp_server.py
 
-### 阶段6: 知识库系统
+# 然后通过Claude Code、iFlow CLI等MCP客户端调用
+# 详见 MCP_USAGE.md
+```
+
+## 🎯 下一步计划（阶段7-10）
+
+### 阶段7: 知识库系统
 - CVE数据库集成
 - MITRE ATT&CK框架
 - 向量存储和相似性搜索
 - 漏洞签名库
 
-### 阶段7: CLI和API接口
+### 阶段8: CLI和API接口
 - Typer CLI实现
 - FastAPI REST API
 - WebSocket实时通信
@@ -190,6 +211,8 @@ print(f"发现: {len(context.findings)} 个问题")
 ## 📚 文档
 
 - `README.md` - 项目概述和快速开始
+- `MCP_USAGE.md` - MCP服务器使用指南 ✅
+- `PROJECT_SUMMARY.md` - 项目总结（本文件）
 - `docs/architecture.md` - 架构设计（待完成）
 - `docs/api_reference.md` - API参考（待完成）
 - `examples/` - 使用示例
@@ -216,9 +239,10 @@ MIT License
 - 灵感来源: PentestGPT研究论文
 - LLM框架: LangChain
 - 安全工具: Nmap, SQLMap等开源社区
+- MCP协议: Anthropic Model Context Protocol
 
 ---
 
-**项目状态:** 核心功能完成 ✅
+**项目状态:** 核心功能 + MCP服务器完成 ✅
 **最后更新:** 2026-01-01
-**版本:** 0.1.0-alpha
+**版本:** 0.2.0-alpha
