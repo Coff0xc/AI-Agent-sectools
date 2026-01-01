@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-pentest"
+version = "0.1.0"
+description = "AI-powered automated penetration testing tool"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "AI Pentest Team"}
+]
+keywords = ["penetration-testing", "security", "ai", "llm", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Information Technology",
+    "Topic :: Security",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "fastapi>=0.104.0",
+    "typer>=0.9.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.0.0",
+    "langchain>=0.1.0",
+    "langchain-openai>=0.0.2",
+    "langchain-anthropic>=0.1.0",
+    "openai>=1.0.0",
+    "anthropic>=0.8.0",
+    "ollama>=0.1.0",
+    "python-nmap>=0.7.1",
+    "httpx>=0.25.0",
+    "docker>=7.0.0",
+    "redis>=5.0.0",
+    "psycopg2-binary>=2.9.9",
+    "chromadb>=0.4.0",
+    "uvicorn>=0.24.0",
+    "python-multipart>=0.0.6",
+    "pyyaml>=6.0",
+    "aiofiles>=23.2.1",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "tenacity>=8.2.3",
+    "rich>=13.7.0",
+    "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.11.0",
+    "ruff>=0.1.6",
+    "mypy>=1.7.0",
+    "pre-commit>=3.5.0",
+]
+
+[project.scripts]
+ai-pentest = "cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "-v --cov=src --cov-report=html --cov-report=term"
