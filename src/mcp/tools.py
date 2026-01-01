@@ -1,5 +1,5 @@
 """MCP tools implementation."""
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 
@@ -233,3 +233,167 @@ class MCPToolsHandler:
             return Target(target_value, TargetType.IP)
         else:
             return Target(target_value, TargetType.DOMAIN)
+
+    # === New Pure Python Scanner Tools ===
+
+    async def scan_ports(
+        self,
+        target: str,
+        ports: Optional[List[int]] = None,
+        grab_banner: bool = True
+    ) -> Dict[str, Any]:
+        """Scan TCP ports on target (pure Python, no nmap required)."""
+        if not self.auth_manager.is_authorized(target):
+            return {"success": False, "error": f"Target {target} not authorized"}
+
+        from ..tools.scanner import PortScanner
+        from ..safety.models import Target as SafetyTarget
+
+        scanner = PortScanner()
+        target_obj = SafetyTarget(value=target, target_type="ip")
+        params = {"grab_banner": grab_banner}
+        if ports:
+            params["ports"] = ports
+
+        try:
+            result = await scanner.execute(target_obj, params)
+            self.auth_manager.log_audit("scan_ports", target, "success")
+            return {"success": True, "data": result.parsed_data}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def scan_directories(
+        self,
+        target: str,
+        wordlist: Optional[List[str]] = None,
+        extensions: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Bruteforce directories and files on web target."""
+        if not self.auth_manager.is_authorized(target):
+            return {"success": False, "error": f"Target {target} not authorized"}
+
+        from ..tools.scanner import DirBruteforcer
+        from ..safety.models import Target as SafetyTarget
+
+        scanner = DirBruteforcer()
+        target_obj = SafetyTarget(value=target, target_type="url")
+        params = {}
+        if wordlist:
+            params["wordlist"] = wordlist
+        if extensions:
+            params["extensions"] = extensions
+
+        try:
+            result = await scanner.execute(target_obj, params)
+            self.auth_manager.log_audit("scan_directories", target, "success")
+            return {"success": True, "data": result.parsed_data}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def enum_subdomains(
+        self,
+        target: str,
+        wordlist: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Enumerate subdomains via DNS."""
+        if not self.auth_manager.is_authorized(target):
+            return {"success": False, "error": f"Target {target} not authorized"}
+
+        from ..tools.scanner import SubdomainEnumerator
+        from ..safety.models import Target as SafetyTarget
+
+        scanner = SubdomainEnumerator()
+        target_obj = SafetyTarget(value=target, target_type="domain")
+        params = {}
+        if wordlist:
+            params["wordlist"] = wordlist
+
+        try:
+            result = await scanner.execute(target_obj, params)
+            self.auth_manager.log_audit("enum_subdomains", target, "success")
+            return {"success": True, "data": result.parsed_data}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def scan_ssl(self, target: str) -> Dict[str, Any]:
+        """Scan SSL/TLS configuration and certificate."""
+        if not self.auth_manager.is_authorized(target):
+            return {"success": False, "error": f"Target {target} not authorized"}
+
+        from ..tools.scanner import SSLScanner
+        from ..safety.models import Target as SafetyTarget
+
+        scanner = SSLScanner()
+        target_obj = SafetyTarget(value=target, target_type="domain")
+
+        try:
+            result = await scanner.execute(target_obj, {})
+            self.auth_manager.log_audit("scan_ssl", target, "success")
+            return {"success": True, "data": result.parsed_data}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def scan_vulns(
+        self,
+        target: str,
+        scan_types: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Scan for web vulnerabilities (SQLi, XSS, LFI)."""
+        if not self.auth_manager.is_authorized(target):
+            return {"success": False, "error": f"Target {target} not authorized"}
+
+        from ..tools.scanner import VulnScanner
+        from ..safety.models import Target as SafetyTarget
+
+        scanner = VulnScanner()
+        target_obj = SafetyTarget(value=target, target_type="url")
+        params = {}
+        if scan_types:
+            params["scan_types"] = scan_types
+
+        try:
+            result = await scanner.execute(target_obj, params)
+            self.auth_manager.log_audit("scan_vulns", target, "success")
+            return {"success": True, "data": result.parsed_data}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def full_recon(self, target: str) -> Dict[str, Any]:
+        """Run full reconnaissance: subdomains, ports, directories, SSL, vulns."""
+        if not self.auth_manager.is_authorized(target):
+            return {"success": False, "error": f"Target {target} not authorized"}
+
+        results = {"target": target, "phases": {}}
+
+        # Phase 1: Subdomain enumeration
+        sub_result = await self.enum_subdomains(target)
+        results["phases"]["subdomains"] = sub_result.get("data", {}) if sub_result["success"] else {"error": sub_result.get("error")}
+
+        # Phase 2: Port scan on main target
+        port_result = await self.scan_ports(target)
+        results["phases"]["ports"] = port_result.get("data", {}) if port_result["success"] else {"error": port_result.get("error")}
+
+        # Phase 3: SSL scan
+        ssl_result = await self.scan_ssl(target)
+        results["phases"]["ssl"] = ssl_result.get("data", {}) if ssl_result["success"] else {"error": ssl_result.get("error")}
+
+        # Phase 4: Directory bruteforce
+        dir_result = await self.scan_directories(f"https://{target}")
+        results["phases"]["directories"] = dir_result.get("data", {}) if dir_result["success"] else {"error": dir_result.get("error")}
+
+        # Phase 5: Vulnerability scan
+        vuln_result = await self.scan_vulns(f"https://{target}")
+        results["phases"]["vulnerabilities"] = vuln_result.get("data", {}) if vuln_result["success"] else {"error": vuln_result.get("error")}
+
+        # Summary
+        results["summary"] = {
+            "subdomains_found": results["phases"].get("subdomains", {}).get("total_found", 0),
+            "open_ports": results["phases"].get("ports", {}).get("total_open", 0),
+            "ssl_issues": results["phases"].get("ssl", {}).get("summary", {}).get("total_issues", 0),
+            "directories_found": results["phases"].get("directories", {}).get("total_found", 0),
+            "vulnerabilities_found": results["phases"].get("vulnerabilities", {}).get("total_vulnerabilities", 0),
+        }
+
+        self.auth_manager.log_audit("full_recon", target, "success")
+        return {"success": True, "data": results}
+

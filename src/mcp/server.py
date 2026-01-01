@@ -154,6 +154,79 @@ class PentestMCPServer:
                     name="pentest_get_config",
                     description="Get current configuration",
                     inputSchema={"type": "object", "properties": {}}
+                ),
+                # === Pure Python Scanner Tools ===
+                Tool(
+                    name="scan_ports",
+                    description="Scan TCP ports (pure Python, no nmap required)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "target": {"type": "string", "description": "Target IP or hostname"},
+                            "ports": {"type": "array", "items": {"type": "integer"}, "description": "Ports to scan (optional)"},
+                            "grab_banner": {"type": "boolean", "description": "Grab service banners (default: true)"}
+                        },
+                        "required": ["target"]
+                    }
+                ),
+                Tool(
+                    name="scan_directories",
+                    description="Bruteforce directories and files on web target",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "target": {"type": "string", "description": "Target URL"},
+                            "wordlist": {"type": "array", "items": {"type": "string"}, "description": "Custom wordlist (optional)"},
+                            "extensions": {"type": "array", "items": {"type": "string"}, "description": "File extensions (optional)"}
+                        },
+                        "required": ["target"]
+                    }
+                ),
+                Tool(
+                    name="enum_subdomains",
+                    description="Enumerate subdomains via DNS",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "target": {"type": "string", "description": "Target domain"},
+                            "wordlist": {"type": "array", "items": {"type": "string"}, "description": "Custom subdomain wordlist (optional)"}
+                        },
+                        "required": ["target"]
+                    }
+                ),
+                Tool(
+                    name="scan_ssl",
+                    description="Scan SSL/TLS configuration and certificate",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "target": {"type": "string", "description": "Target domain or URL"}
+                        },
+                        "required": ["target"]
+                    }
+                ),
+                Tool(
+                    name="scan_vulns",
+                    description="Scan for web vulnerabilities (SQLi, XSS, LFI)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "target": {"type": "string", "description": "Target URL"},
+                            "scan_types": {"type": "array", "items": {"type": "string", "enum": ["sqli", "xss", "lfi", "ssrf"]}, "description": "Vulnerability types to scan (optional)"}
+                        },
+                        "required": ["target"]
+                    }
+                ),
+                Tool(
+                    name="full_recon",
+                    description="Run full reconnaissance: subdomains, ports, directories, SSL, vulns",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "target": {"type": "string", "description": "Target domain"}
+                        },
+                        "required": ["target"]
+                    }
                 )
             ]
 
@@ -178,6 +251,19 @@ class PentestMCPServer:
                     result = await self.tools_handler.pentest_configure_scope(**arguments)
                 elif name == "pentest_get_config":
                     result = await self.tools_handler.pentest_get_config()
+                # Pure Python scanner tools
+                elif name == "scan_ports":
+                    result = await self.tools_handler.scan_ports(**arguments)
+                elif name == "scan_directories":
+                    result = await self.tools_handler.scan_directories(**arguments)
+                elif name == "enum_subdomains":
+                    result = await self.tools_handler.enum_subdomains(**arguments)
+                elif name == "scan_ssl":
+                    result = await self.tools_handler.scan_ssl(**arguments)
+                elif name == "scan_vulns":
+                    result = await self.tools_handler.scan_vulns(**arguments)
+                elif name == "full_recon":
+                    result = await self.tools_handler.full_recon(**arguments)
                 else:
                     result = {"success": False, "error": f"Unknown tool: {name}"}
 

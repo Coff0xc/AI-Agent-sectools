@@ -5,15 +5,24 @@ from .models import ToolConfig, ToolCategory
 from .network.nmap_wrapper import NmapTool
 from .web.scanner import WebScanner
 from .api.rest_tester import RESTTester
+# Pure Python scanners (no external dependencies)
+from .scanner import PortScanner, DirBruteforcer, SubdomainEnumerator, SSLScanner, VulnScanner
 
 
 class ToolRegistry:
     """工具注册表。"""
 
     _tools: Dict[str, Type[BaseTool]] = {
+        # External tool wrappers
         "nmap": NmapTool,
         "web_scanner": WebScanner,
         "rest_tester": RESTTester,
+        # Pure Python scanners
+        "port_scanner": PortScanner,
+        "dir_bruteforce": DirBruteforcer,
+        "subdomain_enum": SubdomainEnumerator,
+        "ssl_scanner": SSLScanner,
+        "vuln_scanner": VulnScanner,
     }
 
     @classmethod
