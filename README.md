@@ -53,8 +53,8 @@ Infrastructure Layer (Docker/Storage/Reporting)
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/ai-pentest.git
-cd ai-pentest
+git clone https://github.com/Coff0xc/AI-Agent-sectools.git
+cd AI-Agent-sectools
 ```
 
 ### 2. Set Up Environment
